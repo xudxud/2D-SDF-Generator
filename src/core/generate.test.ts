@@ -34,6 +34,11 @@ describe("exactSignedDistance", () => {
   it("uses the image boundary as outside padding", () => {
     expect(exactSignedDistance(new Uint8Array([1]), 1, 1)[0]).toBeCloseTo(0.5);
   });
+
+  it("handles masks without any inside pixels", () => {
+    const result = exactSignedDistance(new Uint8Array(9), 3, 3);
+    expect(result.every((distance) => Number.isFinite(distance) && distance < 0)).toBe(true);
+  });
 });
 
 describe("generateSdf", () => {

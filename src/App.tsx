@@ -17,7 +17,14 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import type { GenerateOptions, GenerateRequest, GenerateResult, WorkerResponse } from "./core/types";
+import type {
+  GenerateOptions,
+  GenerateRequest,
+  GenerateResult,
+  RegisterSourceRequest,
+  RemoveSourceRequest,
+  WorkerResponse,
+} from "./core/types";
 import { loadImageFile, savePng, type LoadedImage } from "./lib/images";
 import { appendSorted, sortByFilename } from "./lib/order";
 
@@ -118,7 +125,11 @@ function App() {
     canvas.width = result.width;
     canvas.height = result.height;
     const context = canvas.getContext("2d");
-    const displayPixels = new Uint8ClampedArray(result.pixels);
+    const displayPixels = new Uint8ClampedArray(
+      result.pixels.buffer as ArrayBuffer,
+      result.pixels.byteOffset,
+      result.pixels.byteLength,
+    );
     context?.putImageData(new ImageData(displayPixels, result.width, result.height), 0, 0);
   }, [result]);
 
@@ -126,7 +137,22 @@ function App() {
     setError("");
     try {
       const sortedFiles = sortByFilename(Array.from(files));
-      const loaded = await Promise.all(sortedFiles.map(loadImageFile));
+      const loaded: LoadedImage[] = [];
+      for (const file of sortedFiles) {
+        const image = await loadImageFile(file);
+        loaded.push(image);
+        const request: RegisterSourceRequest = {
+          type: "register-source",
+          source: {
+            id: image.id,
+            name: image.name,
+            width: image.width,
+            height: image.height,
+            file: image.file,
+          },
+        };
+        workerRef.current?.postMessage(request);
+      }
       setSources((current) => {
         if (current.length === 0 && loaded[0]) {
           setOptions((value) => ({
@@ -146,6 +172,8 @@ function App() {
   const removeSource = (index: number) => {
     setSources((current) => {
       URL.revokeObjectURL(current[index].url);
+      const request: RemoveSourceRequest = { type: "remove-source", id: current[index].id };
+      workerRef.current?.postMessage(request);
       return current.filter((_, itemIndex) => itemIndex !== index);
     });
     setResult(null);
@@ -175,7 +203,7 @@ function App() {
     const request: GenerateRequest = {
       type: "generate",
       id,
-      sources: sources.map(({ name, width, height, rgba }) => ({ name, width, height, rgba })),
+      sourceIds: sources.map((source) => source.id),
       options,
     };
     workerRef.current.postMessage(request);
@@ -268,10 +296,11 @@ function App() {
           </div>
           <div className="preview-meta">
             <span>{options.width} x {options.height} PX</span>
-            <span>{options.algorithm === "exact" ? "EXACT EDT" : "8-NEIGHBOR CHAMFER"}</span>
+            <span>{result?.backend === "webgpu" ? "WEBGPU JFA+2" : options.algorithm === "chamfer" ? "8-NEIGHBOR CHAMFER" : options.algorithm === "gpu" && result ? "EXACT EDT / CPU FALLBACK" : options.algorithm === "gpu" ? "FAST GPU / AUTO" : "EXACT EDT"}</span>
             <span>{sources.length} LAYER{sources.length === 1 ? "" : "S"}</span>
           </div>
           {result && result.conflictPixels > 0 && <p className="warning">{result.conflictPixels.toLocaleString()} non-nested layer conflicts detected.</p>}
+          {result?.notice && <p className="notice">{result.notice}</p>}
         </section>
 
         <aside className="panel settings-panel">
@@ -280,7 +309,7 @@ function App() {
             <label>WIDTH<input type="number" min="1" max="8192" value={options.width} onChange={(e) => setOptions({ ...options, width: Number(e.target.value) })} /></label>
             <label>HEIGHT<input type="number" min="1" max="8192" value={options.height} onChange={(e) => setOptions({ ...options, height: Number(e.target.value) })} /></label>
           </div>
-          <label className="control-label">ALGORITHM<select value={options.algorithm} onChange={(e) => setOptions({ ...options, algorithm: e.target.value as GenerateOptions["algorithm"] })}><option value="exact">Exact Euclidean</option><option value="chamfer">Legacy Chamfer</option></select></label>
+          <label className="control-label">ALGORITHM<select value={options.algorithm} onChange={(e) => setOptions({ ...options, algorithm: e.target.value as GenerateOptions["algorithm"] })}><option value="exact">Exact Euclidean (CPU)</option><option value="gpu">Fast Approximate (WebGPU)</option><option value="chamfer">Legacy Chamfer (CPU)</option></select></label>
           <label className="control-label">MASK CHANNEL<select value={options.channel} onChange={(e) => setOptions({ ...options, channel: e.target.value as GenerateOptions["channel"] })}><option value="luminance">Luminance</option><option value="alpha">Alpha</option><option value="red">Red</option></select></label>
           <label className="range-label">
             <span>THRESHOLD <input className="range-value" type="number" min="0" max="1" step="0.01" value={options.threshold} onChange={(e) => e.target.value !== "" && setOptions({ ...options, threshold: Math.min(1, Math.max(0, Number(e.target.value))) })} /></span>

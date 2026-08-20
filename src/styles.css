@@ -73,8 +73,9 @@ main { min-height: 100vh; padding: 8px 8px 0; }
 .ruler-x { left: 24px; right: 24px; bottom: 9px; height: 4px; background: repeating-linear-gradient(90deg, var(--muted) 0 1px, transparent 1px 20px); }
 .ruler-y { top: 24px; bottom: 24px; left: 9px; width: 4px; background: repeating-linear-gradient(0deg, var(--muted) 0 1px, transparent 1px 20px); }
 .preview-meta { display: flex; justify-content: space-between; padding: 7px 2px 0; color: var(--muted); font-size: 9px; }
-.warning, .error { margin: 0; padding: 7px 8px; border: 1px solid #6c4a2a; border-radius: 2px; background: #3a3024; color: #e0b86e; font-size: 10px; line-height: 1.45; }
+.warning, .error, .notice { margin: 0; padding: 7px 8px; border: 1px solid #6c4a2a; border-radius: 2px; background: #3a3024; color: #e0b86e; font-size: 10px; line-height: 1.45; }
 .error { border-color: #713636; background: #3d2929; color: #e48585; }
+.notice { border-color: #36566a; background: #263740; color: #8fc3df; }
 
 .settings-panel { display: flex; flex-direction: column; gap: 11px; }
 .field-grid { display: grid; gap: 6px; }

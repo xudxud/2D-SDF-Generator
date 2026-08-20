@@ -18,6 +18,7 @@ browser or on Windows. Your images stay on your device.
 ## Features
 
 - Exact Euclidean signed distance fields
+- Fast WebGPU mode for large images, with automatic CPU fallback
 - Single masks and layered nested masks
 - Luminance, alpha, and red-channel input
 - Threshold, output inversion, pixel range, and posterization controls
@@ -33,6 +34,11 @@ the top to the largest at the bottom. Files are sorted naturally by name when
 you add them, and you can drag rows or use **Reverse Order** to adjust the list.
 
 The app will warn you if the masks do not follow the expected nesting order.
+
+**Exact Euclidean** uses the CPU for deterministic output. **Fast Approximate**
+uses WebGPU and JFA+2 for much faster large-image processing, with a small
+accuracy tradeoff. If WebGPU is unavailable, the app falls back to Exact CPU
+mode automatically.
 
 ## Development
 

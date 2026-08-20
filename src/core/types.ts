@@ -1,5 +1,6 @@
-export type Algorithm = "exact" | "chamfer";
+export type Algorithm = "exact" | "gpu" | "chamfer";
 export type MaskChannel = "alpha" | "luminance" | "red";
+export type ProcessingBackend = "cpu" | "webgpu";
 
 export interface SourceImage {
   name: string;
@@ -24,14 +25,34 @@ export interface GenerateResult {
   height: number;
   pixels: Uint8ClampedArray;
   conflictPixels: number;
+  backend: ProcessingBackend;
+  notice?: string;
 }
 
 export interface GenerateRequest {
   type: "generate";
   id: number;
-  sources: SourceImage[];
+  sourceIds: string[];
   options: GenerateOptions;
 }
+
+export interface RegisterSourceRequest {
+  type: "register-source";
+  source: {
+    id: string;
+    name: string;
+    width: number;
+    height: number;
+    file: Blob;
+  };
+}
+
+export interface RemoveSourceRequest {
+  type: "remove-source";
+  id: string;
+}
+
+export type WorkerRequest = GenerateRequest | RegisterSourceRequest | RemoveSourceRequest;
 
 export interface GenerateResponse {
   type: "result";

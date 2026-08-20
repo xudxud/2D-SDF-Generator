@@ -10,6 +10,7 @@ export default defineConfig({
   base: process.env.VITE_BASE_PATH ?? "/",
   clearScreen: false,
   server: {
+    port: 1420,
     strictPort: true,
   },
   envPrefix: ["VITE_", "TAURI_ENV_*"],
