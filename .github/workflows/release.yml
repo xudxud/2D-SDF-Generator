@@ -1,0 +1,41 @@
+name: Release Windows
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - run: npm ci
+      - run: npm test
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: 2D SDF Generator ${{ github.ref_name }}
+          releaseBody: See the repository README for usage and release notes.
+          releaseDraft: true
+          prerelease: false
+      - name: Package portable executable
+        shell: pwsh
+        run: Compress-Archive -LiteralPath "src-tauri/target/release/sdf-generator.exe" -DestinationPath "2D-SDF-Generator-${{ github.ref_name }}-windows-portable.zip"
+      - name: Upload portable executable
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "${{ github.ref_name }}" "2D-SDF-Generator-${{ github.ref_name }}-windows-portable.zip" --clobber

@@ -1,1 +1,19 @@
 .DS_Store
+node_modules/
+dist/
+coverage/
+*.log
+*.tsbuildinfo
+.vite/
+
+# Tauri / Rust
+src-tauri/target/
+
+# Editors
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Local environment
+.env
+.env.local

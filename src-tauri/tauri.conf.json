@@ -1,0 +1,41 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "2D SDF Generator",
+  "version": "0.1.0",
+  "identifier": "io.github.xudxud.sdf-generator",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "2D SDF Generator",
+        "width": 1440,
+        "height": 900,
+        "minWidth": 900,
+        "minHeight": 700,
+        "dragDropEnabled": false,
+        "resizable": true
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis", "msi"],
+    "icon": ["icons/icon.ico"],
+    "shortDescription": "Local-first 2D signed distance field generator",
+    "longDescription": "Generate exact and layered 2D signed distance fields without uploading source images.",
+    "windows": {
+      "webviewInstallMode": {
+        "type": "downloadBootstrapper",
+        "silent": true
+      }
+    }
+  }
+}
