@@ -27,7 +27,7 @@ const DEFAULT_OPTIONS: GenerateOptions = {
   pxRange: 64,
   threshold: 0.5,
   channel: "luminance",
-  invert: false,
+  invertOutput: false,
   algorithm: "exact",
   posterizeSteps: 0,
 };
@@ -282,10 +282,16 @@ function App() {
           </div>
           <label className="control-label">ALGORITHM<select value={options.algorithm} onChange={(e) => setOptions({ ...options, algorithm: e.target.value as GenerateOptions["algorithm"] })}><option value="exact">Exact Euclidean</option><option value="chamfer">Legacy Chamfer</option></select></label>
           <label className="control-label">MASK CHANNEL<select value={options.channel} onChange={(e) => setOptions({ ...options, channel: e.target.value as GenerateOptions["channel"] })}><option value="luminance">Luminance</option><option value="alpha">Alpha</option><option value="red">Red</option></select></label>
-          <label className="range-label"><span>THRESHOLD <output>{options.threshold.toFixed(2)}</output></span><input type="range" min="0" max="1" step="0.01" value={options.threshold} style={rangeStyle(options.threshold, 0, 1)} onChange={(e) => setOptions({ ...options, threshold: Number(e.target.value) })} /></label>
-          <label className="range-label"><span>PIXEL RANGE <output>{options.pxRange}</output></span><input type="range" min="1" max="256" value={options.pxRange} style={rangeStyle(options.pxRange, 1, 256)} onChange={(e) => setOptions({ ...options, pxRange: Number(e.target.value) })} /></label>
+          <label className="range-label">
+            <span>THRESHOLD <input className="range-value" type="number" min="0" max="1" step="0.01" value={options.threshold} onChange={(e) => e.target.value !== "" && setOptions({ ...options, threshold: Math.min(1, Math.max(0, Number(e.target.value))) })} /></span>
+            <input type="range" min="0" max="1" step="0.01" value={options.threshold} style={rangeStyle(options.threshold, 0, 1)} onChange={(e) => setOptions({ ...options, threshold: Number(e.target.value) })} />
+          </label>
+          <label className="range-label">
+            <span>PIXEL RANGE <input className="range-value" type="number" min="1" max="256" step="1" value={options.pxRange} onChange={(e) => e.target.value !== "" && setOptions({ ...options, pxRange: Math.round(Math.min(256, Math.max(1, Number(e.target.value)))) })} /></span>
+            <input type="range" min="1" max="256" value={options.pxRange} style={rangeStyle(options.pxRange, 1, 256)} onChange={(e) => setOptions({ ...options, pxRange: Number(e.target.value) })} />
+          </label>
           <label className="control-label">POSTERIZE LEVELS<input type="number" min="0" max="256" value={options.posterizeSteps} onChange={(e) => setOptions({ ...options, posterizeSteps: Number(e.target.value) })} /><small>0 keeps the field continuous.</small></label>
-          <label className="toggle"><input type="checkbox" checked={options.invert} onChange={(e) => setOptions({ ...options, invert: e.target.checked })} /><span /> INVERT MASK</label>
+          <label className="toggle"><input type="checkbox" checked={options.invertOutput} onChange={(e) => setOptions({ ...options, invertOutput: e.target.checked })} /><span /> INVERT OUTPUT</label>
 
           {error && <p className="error">{error}</p>}
           <button className="generate-button" onClick={generate} disabled={busy || sources.length === 0}>

@@ -37,7 +37,7 @@ export function imageToMask(source: SourceImage, options: GenerateOptions) {
     for (let x = 0; x < options.width; x++) {
       const coverage = sampleCoverage(source, x, y, options);
       const inside = coverage >= options.threshold;
-      mask[y * options.width + x] = inside !== options.invert ? 1 : 0;
+      mask[y * options.width + x] = inside ? 1 : 0;
     }
   }
   return mask;
@@ -107,6 +107,7 @@ export function generateSdf(
     conflicts += conflictFlags[i];
     let value = values[i];
     if (steps >= 2) value = Math.round(value * (steps - 1)) / (steps - 1);
+    if (options.invertOutput) value = 1 - value;
     const byte = Math.round(value * 255);
     const offset = i * 4;
     pixels[offset] = byte;

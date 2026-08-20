@@ -9,7 +9,7 @@ const options: GenerateOptions = {
   pxRange: 4,
   threshold: 0.5,
   channel: "red",
-  invert: false,
+  invertOutput: false,
   algorithm: "exact",
   posterizeSteps: 0,
 };
@@ -50,5 +50,16 @@ describe("generateSdf", () => {
     expect(result.pixels[4 * 4]).toBe(255);
     expect(result.pixels[0]).toBeLessThan(255);
     expect(result.conflictPixels).toBe(0);
+  });
+
+  it("inverts only the final output values", () => {
+    const mask = source([0, 0, 0, 0, 1, 0, 0, 0, 0]);
+    const normal = generateSdf([mask], options);
+    const inverted = generateSdf([mask], { ...options, invertOutput: true });
+
+    for (let pixel = 0; pixel < options.width * options.height; pixel++) {
+      expect(normal.pixels[pixel * 4] + inverted.pixels[pixel * 4]).toBe(255);
+    }
+    expect(inverted.conflictPixels).toBe(normal.conflictPixels);
   });
 });

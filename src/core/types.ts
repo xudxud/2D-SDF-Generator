@@ -14,7 +14,7 @@ export interface GenerateOptions {
   pxRange: number;
   threshold: number;
   channel: MaskChannel;
-  invert: boolean;
+  invertOutput: boolean;
   algorithm: Algorithm;
   posterizeSteps: number;
 }

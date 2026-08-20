@@ -84,7 +84,10 @@ input[type="number"], select { width: 100%; height: 27px; padding: 3px 7px; bord
 input[type="number"]:hover, select:hover { background: var(--input-hover); outline-color: #4a4a4a; }
 input[type="number"]:focus, select:focus { outline-color: var(--accent); }
 .range-label span { display: flex; justify-content: space-between; }
-output { color: #d7d7d7; }
+.range-label .range-value { width: 58px; height: 23px; padding: 2px 5px; text-align: right; }
+.range-label .range-value::-webkit-inner-spin-button,
+.range-label .range-value::-webkit-outer-spin-button { margin: 0; appearance: none; }
+.range-label .range-value { -moz-appearance: textfield; }
 input[type="range"] { width: 100%; height: 14px; margin: 0; appearance: none; background: linear-gradient(to right, var(--accent) 0 var(--range-progress), #4a4a4a var(--range-progress) 100%) center / 100% 3px no-repeat; accent-color: var(--accent); }
 input[type="range"]::-webkit-slider-runnable-track { height: 3px; border: 0; background: transparent; }
 input[type="range"]::-webkit-slider-thumb { width: 10px; height: 14px; margin-top: -6px; appearance: none; border: 1px solid #181818; border-radius: 2px; background: #bcbcbc; }

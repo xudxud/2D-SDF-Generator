@@ -20,7 +20,7 @@ browser or on Windows. Your images stay on your device.
 - Exact Euclidean signed distance fields
 - Single masks and layered nested masks
 - Luminance, alpha, and red-channel input
-- Threshold, inversion, pixel range, and posterization controls
+- Threshold, output inversion, pixel range, and posterization controls
 - Local CPU processing with no uploads
 - PNG export in both Web and Windows versions
 
