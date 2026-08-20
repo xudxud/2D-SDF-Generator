@@ -1,7 +1,25 @@
 import { useEffect, useRef, useState } from "react";
-import type { DragEvent } from "react";
+import type { CSSProperties, DragEvent, MouseEvent } from "react";
+import {
+  closestCenter,
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import type { GenerateOptions, GenerateRequest, GenerateResult, WorkerResponse } from "./core/types";
 import { loadImageFile, savePng, type LoadedImage } from "./lib/images";
+import { appendSorted, sortByFilename } from "./lib/order";
 
 const DEFAULT_OPTIONS: GenerateOptions = {
   width: 512,
@@ -16,6 +34,38 @@ const DEFAULT_OPTIONS: GenerateOptions = {
 
 const SOURCE_URL = "https://github.com/xudxud/2D-SDF-Generator";
 
+function rangeStyle(value: number, min: number, max: number) {
+  const progress = ((value - min) / (max - min)) * 100;
+  return { "--range-progress": `${progress}%` } as CSSProperties;
+}
+
+interface SortableSourceProps {
+  source: LoadedImage;
+  index: number;
+  onRemove: (index: number) => void;
+}
+
+function SortableSource({ source, index, onRemove }: SortableSourceProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: source.id,
+  });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <article ref={setNodeRef} style={style} className={`source-item ${isDragging ? "is-sorting" : ""}`}>
+      <button className="drag-handle" {...attributes} {...listeners} aria-label={`Reorder ${source.name}`}>
+        <span /><span /><span /><span /><span /><span />
+      </button>
+      <img src={source.url} alt="" draggable={false} />
+      <div><b>{String(index + 1).padStart(2, "0")}</b><strong>{source.name}</strong><small>{source.width} x {source.height}</small></div>
+      <button className="remove-source" onClick={() => onRemove(index)} aria-label={`Remove ${source.name}`}>×</button>
+    </article>
+  );
+}
+
 function App() {
   const [sources, setSources] = useState<LoadedImage[]>([]);
   const [options, setOptions] = useState(DEFAULT_OPTIONS);
@@ -27,6 +77,10 @@ function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const workerRef = useRef<Worker | null>(null);
   const requestId = useRef(0);
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
 
   useEffect(() => {
     const worker = new Worker(new URL("./workers/sdf.worker.ts", import.meta.url), { type: "module" });
@@ -71,7 +125,8 @@ function App() {
   const addFiles = async (files: FileList | File[]) => {
     setError("");
     try {
-      const loaded = await Promise.all(Array.from(files).map(loadImageFile));
+      const sortedFiles = sortByFilename(Array.from(files));
+      const loaded = await Promise.all(sortedFiles.map(loadImageFile));
       setSources((current) => {
         if (current.length === 0 && loaded[0]) {
           setOptions((value) => ({
@@ -80,7 +135,7 @@ function App() {
             height: loaded[0].height,
           }));
         }
-        return [...current, ...loaded];
+        return appendSorted(current, loaded);
       });
       setResult(null);
     } catch (cause) {
@@ -96,14 +151,18 @@ function App() {
     setResult(null);
   };
 
-  const moveSource = (index: number, direction: -1 | 1) => {
+  const reorderSources = ({ active, over }: DragEndEvent) => {
+    if (!over || active.id === over.id) return;
     setSources((current) => {
-      const target = index + direction;
-      if (target < 0 || target >= current.length) return current;
-      const next = [...current];
-      [next[index], next[target]] = [next[target], next[index]];
-      return next;
+      const from = current.findIndex((source) => source.id === active.id);
+      const to = current.findIndex((source) => source.id === over.id);
+      return from < 0 || to < 0 ? current : arrayMove(current, from, to);
     });
+    setResult(null);
+  };
+
+  const reverseSources = () => {
+    setSources((current) => [...current].reverse());
     setResult(null);
   };
 
@@ -130,7 +189,7 @@ function App() {
     }, "image/png");
   };
 
-  const openSource = async (event: React.MouseEvent<HTMLAnchorElement>) => {
+  const openSource = async (event: MouseEvent<HTMLAnchorElement>) => {
     if (!("__TAURI_INTERNALS__" in window)) return;
     event.preventDefault();
     try {
@@ -158,7 +217,7 @@ function App() {
             <p><b>TOP</b> Smallest white area</p>
             <i>↓</i>
             <p><b>BOTTOM</b> Largest white area</p>
-            <small>The list order is the calculation order. Use the arrows to rearrange masks.</small>
+            <small>Files are sorted by name on import. Drag rows to customize the calculation order.</small>
           </div>
           <label
             className={`drop-zone ${dragging ? "is-dragging" : ""}`}
@@ -185,19 +244,19 @@ function App() {
             <span>or click to browse / PNG, JPG, WEBP</span>
           </label>
 
-          <div className="source-list">
-            {sources.map((source, index) => (
-              <article className="source-item" key={source.id}>
-                <img src={source.url} alt="" />
-                <div><b>{String(index + 1).padStart(2, "0")}</b><strong>{source.name}</strong><small>{source.width} x {source.height}</small></div>
-                <div className="source-actions">
-                  <button onClick={() => moveSource(index, -1)} disabled={index === 0} aria-label="Move up">↑</button>
-                  <button onClick={() => moveSource(index, 1)} disabled={index === sources.length - 1} aria-label="Move down">↓</button>
-                  <button onClick={() => removeSource(index)} aria-label="Remove">×</button>
-                </div>
-              </article>
-            ))}
+          <div className="source-toolbar">
+            <span>{sources.length} MASK{sources.length === 1 ? "" : "S"}</span>
+            <button onClick={reverseSources} disabled={sources.length < 2}>REVERSE ORDER</button>
           </div>
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={reorderSources}>
+            <SortableContext items={sources.map((source) => source.id)} strategy={verticalListSortingStrategy}>
+              <div className="source-list">
+                {sources.map((source, index) => (
+                  <SortableSource source={source} index={index} onRemove={removeSource} key={source.id} />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
         </aside>
 
         <section className="panel preview-panel">
@@ -223,8 +282,8 @@ function App() {
           </div>
           <label className="control-label">ALGORITHM<select value={options.algorithm} onChange={(e) => setOptions({ ...options, algorithm: e.target.value as GenerateOptions["algorithm"] })}><option value="exact">Exact Euclidean</option><option value="chamfer">Legacy Chamfer</option></select></label>
           <label className="control-label">MASK CHANNEL<select value={options.channel} onChange={(e) => setOptions({ ...options, channel: e.target.value as GenerateOptions["channel"] })}><option value="luminance">Luminance</option><option value="alpha">Alpha</option><option value="red">Red</option></select></label>
-          <label className="range-label"><span>THRESHOLD <output>{options.threshold.toFixed(2)}</output></span><input type="range" min="0" max="1" step="0.01" value={options.threshold} onChange={(e) => setOptions({ ...options, threshold: Number(e.target.value) })} /></label>
-          <label className="range-label"><span>PIXEL RANGE <output>{options.pxRange}</output></span><input type="range" min="1" max="256" value={options.pxRange} onChange={(e) => setOptions({ ...options, pxRange: Number(e.target.value) })} /></label>
+          <label className="range-label"><span>THRESHOLD <output>{options.threshold.toFixed(2)}</output></span><input type="range" min="0" max="1" step="0.01" value={options.threshold} style={rangeStyle(options.threshold, 0, 1)} onChange={(e) => setOptions({ ...options, threshold: Number(e.target.value) })} /></label>
+          <label className="range-label"><span>PIXEL RANGE <output>{options.pxRange}</output></span><input type="range" min="1" max="256" value={options.pxRange} style={rangeStyle(options.pxRange, 1, 256)} onChange={(e) => setOptions({ ...options, pxRange: Number(e.target.value) })} /></label>
           <label className="control-label">POSTERIZE LEVELS<input type="number" min="0" max="256" value={options.posterizeSteps} onChange={(e) => setOptions({ ...options, posterizeSteps: Number(e.target.value) })} /><small>0 keeps the field continuous.</small></label>
           <label className="toggle"><input type="checkbox" checked={options.invert} onChange={(e) => setOptions({ ...options, invert: e.target.checked })} /><span /> INVERT MASK</label>
 
