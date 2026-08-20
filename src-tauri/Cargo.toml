@@ -1,6 +1,6 @@
 [package]
 name = "sdf-generator"
-version = "0.1.0"
+version = "0.1.1"
 description = "A local-first 2D signed distance field generator"
 authors = ["xudxud"]
 edition = "2021"
